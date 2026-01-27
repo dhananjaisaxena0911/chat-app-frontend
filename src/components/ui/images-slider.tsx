@@ -153,7 +153,7 @@ const [isSliderOpen, setIsSliderOpen] = useState(false);
     <div
     
       className={cn(
-        "overflow-hidden h-full w-full relative flex items-center justify-center",
+        "fixed inset-0 z-[9999] overflow-hidden h-full w-full relative flex items-center justify-center bg-black",
         className
       )}
       style={{

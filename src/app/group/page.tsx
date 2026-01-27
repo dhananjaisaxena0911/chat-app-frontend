@@ -96,64 +96,70 @@ export default function GroupListPage() {
       )}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
-          <h2 className="text-lg font-bold mb-4 text-black dark:text-white">
-            Create new Group
-          </h2>
-          <input
-            type="text"
-            placeholder="Group Name"
-            value={groupName}
-            onChange={(e) => setGroupName(e.target.value)}
-            className="w-full p-2 mb-4 border rounded text-black"
-          />
-          <label className="text-black dark:text-white">Member IDs</label>
-          <input
-            type="text"
-            placeholder="user1,user2"
-            onChange={(e) => {
-              const ids = e.target.value.split(",").map((id) => id.trim());
-              setmemberIds(ids);
-            }}
-            className="w-full p-2 mb-4 border rounded text-black"
-          />
-          <div className="flex justify-between">
-            <button
-              className="bg-gray-500 text-white px-4 py-2 rounded"
-              onClick={() => setIsCreateModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button
-              className="bg-green-600 text-white px-4 py-2 rounded"
-              onClick={async () => {
-                const adminId = localStorage.getItem("currentUserId");
-                if (!adminId) return alert("Login required");
-
-                const res = await fetch("http://localhost:3001/group", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    name: groupName,
-                    adminId,
-                    memberIds,
-                  }),
-                });
-
-                if (res.ok) {
-                  const newGroup = await res.json();
-                  setGroups((prev) => [...prev, newGroup]);
-                  setIsCreateModalOpen(false);
-                  setGroupName("");
-                  setmemberIds([]);
-                  alert("Group created!");
-                } else {
-                  const error = await res.json();
-                  alert(error.message || "Failed to create group.");
-                }
+          <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg w-full max-w-md mx-4">
+            <h2 className="text-xl font-bold mb-4 text-black dark:text-white">
+              Create new Group
+            </h2>
+            <input
+              type="text"
+              placeholder="Group Name"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              className="w-full p-2 mb-4 border rounded text-black dark:text-white dark:bg-neutral-700"
+            />
+            <label className="text-black dark:text-white block mb-2">Member IDs (comma separated)</label>
+            <input
+              type="text"
+              placeholder="user1,user2"
+              onChange={(e) => {
+                const ids = e.target.value.split(",").map((id) => id.trim()).filter(id => id.length > 0);
+                setmemberIds(ids);
               }}
-            >
-              Create
-            </button>
+              className="w-full p-2 mb-4 border rounded text-black dark:text-white dark:bg-neutral-700"
+            />
+            <div className="flex justify-between gap-4">
+              <button
+                className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                onClick={() => setIsCreateModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                onClick={async () => {
+                  const adminId = localStorage.getItem("currentUserId");
+                  if (!adminId) return alert("Login required");
+                  
+                  if (!groupName || groupName.trim().length === 0) {
+                    return alert("Please enter a group name");
+                  }
+
+                  const res = await fetch("http://localhost:3001/group", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      name: groupName.trim(),
+                      adminId,
+                      memberIds: memberIds || [],
+                    }),
+                  });
+
+                  if (res.ok) {
+                    const newGroup = await res.json();
+                    setGroups((prev) => [...prev, newGroup]);
+                    setIsCreateModalOpen(false);
+                    setGroupName("");
+                    setmemberIds([]);
+                    alert("Group created!");
+                  } else {
+                    const error = await res.json();
+                    alert(error.message || "Failed to create group.");
+                  }
+                }}
+              >
+                Create
+              </button>
+            </div>
           </div>
         </div>
       )}

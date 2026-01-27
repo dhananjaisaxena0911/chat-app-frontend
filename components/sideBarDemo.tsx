@@ -1,130 +1,195 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { deleteCookie } from "cookies-next/client";
-import { Sidebar, SidebarBody, SidebarLink } from "../components/ui/sidebar"; // Adjust this
+import { Sidebar, SidebarBody, SidebarLink } from "../components/ui/sidebar";
 import {
   IconArrowLeft,
   IconBrandTabler,
   IconSettings,
   IconUserBolt,
   IconPencil,
+  IconMessage,
 } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { cn } from "../lib/utils";
-export function SidebarDemo({ children }: { children?: React.ReactNode }) {
-  const handleLogout = () => {
+
+// Constants for styling - DRY principle
+const ICON_CLASSES = "h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200";
+
+interface SidebarLinkItem {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+interface SidebarDemoProps {
+  children?: React.ReactNode;
+}
+
+export function SidebarDemo({ children }: SidebarDemoProps) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+
+  // Memoize logout handler to prevent unnecessary re-renders
+  const handleLogout = useCallback(() => {
     // Clear localStorage
     localStorage.removeItem("currentUserId");
     localStorage.removeItem("token");
 
+    // Clear session cookie
     deleteCookie("token", { path: "/" });
 
-    console.log("Logged out. Redirecting to /auth");
+    // Use Next.js router for proper navigation
+    router.push("/auth");
+  }, [router]);
 
-    window.location.href = "/auth";
-  };
-
-  const links = [
-    {
-      label: "Dashboard",
-      href: "/",
-      icon: (
-        <IconBrandTabler className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-    {
-      label: "Profile",
-      href: "/profile",
-      icon: (
-        <IconUserBolt className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-    {
-      label: "Groups",
-      href: "/group",
-      icon: (
-        <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-    {
-      label: "Blog",
-      href: "/blog",
-      icon: (
-        <IconPencil className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
-      ),
-    },
-  ];
-
-  const [open, setOpen] = useState(false);
-
-  const handleMouseEnter = () => setOpen(true);
-  const handleMouseLeave = () => setOpen(false);
+  // Memoize links array to prevent unnecessary re-renders
+  const links: SidebarLinkItem[] = useMemo(
+    () => [
+      {
+        label: "Dashboard",
+        href: "/",
+        icon: <IconBrandTabler className={ICON_CLASSES} />,
+      },
+      {
+        label: "Messages",
+        href: "/messages",
+        icon: <IconMessage className={ICON_CLASSES} />,
+      },
+      {
+        label: "Profile",
+        href: "/profile",
+        icon: <IconUserBolt className={ICON_CLASSES} />,
+      },
+      {
+        label: "Groups",
+        href: "/group",
+        icon: <IconSettings className={ICON_CLASSES} />,
+      },
+      {
+        label: "Blog",
+        href: "/blog",
+        icon: <IconPencil className={ICON_CLASSES} />,
+      },
+    ],
+    []
+  );
 
   return (
     <div
       className={cn(
-        "mx-auto flex w-full  flex-1 min-h-screen flex-col overflow-visible rounded-md border border-neutral-200 bg-gray-100 md:flex-row dark:border-neutral-700 dark:bg-neutral-800",
-        "h-screen"
+        "flex w-full min-h-screen",
+        "bg-gray-100 dark:bg-neutral-900"
       )}
     >
+      {/* Sidebar - Fixed position */}
       <div
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className={`transition-all duration-300 ${open ? "w-64" : "w-16"}`}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className={cn(
+          "hidden md:flex flex-col transition-all duration-300 flex-shrink-0 h-screen sticky top-0",
+          open ? "w-64" : "w-16"
+        )}
       >
         <Sidebar open={open} setOpen={setOpen}>
-          <SidebarBody className="justify-between gap-10 ">
-            <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
+          <SidebarBody className="justify-between gap-10 h-full">
+            <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto h-full">
               {open ? <Logo /> : <LogoIcon />}
               <div className="mt-8 flex flex-col gap-2">
-                {links.map((link, idx) => (
-                  <SidebarLink key={idx} link={link} />
+                {links.map((link) => (
+                  <SidebarLink key={link.href} link={link} />
                 ))}
               </div>
             </div>
-            <div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 w-full text-left"
-              >
-                <IconArrowLeft className="h-5 w-5 shrink-0" />
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 w-full text-left rounded-md transition-colors"
+            >
+              <IconArrowLeft className="h-5 w-5 shrink-0" />
+              <span className={cn(open ? "inline-block" : "hidden")}>
                 Logout
-              </button>
-            </div>
+              </span>
+            </button>
           </SidebarBody>
         </Sidebar>
       </div>
-      <div className="flex-1 p-4">{children}</div>
+
+      {/* Mobile sidebar toggle - visible on mobile */}
+      <div className="md:hidden fixed bottom-4 right-4 z-50">
+        <button
+          onClick={() => setOpen(!open)}
+          className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg"
+        >
+          <IconBrandTabler className="w-6 h-6" />
+        </button>
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            onMouseEnter={() => setOpen(true)}
+            onMouseLeave={() => setOpen(false)}
+            className="absolute left-0 top-0 h-full w-64 bg-white dark:bg-neutral-800 shadow-xl"
+          >
+            <Sidebar open={open} setOpen={setOpen}>
+              <SidebarBody className="justify-between gap-10 h-full pt-12">
+                <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto h-full">
+                  {open ? <Logo /> : <LogoIcon />}
+                  <div className="mt-8 flex flex-col gap-2">
+                    {links.map((link) => (
+                      <SidebarLink key={link.href} link={link} />
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 w-full text-left rounded-md transition-colors"
+                >
+                  <IconArrowLeft className="h-5 w-5 shrink-0" />
+                  <span className={cn(open ? "inline-block" : "hidden")}>
+                    Logout
+                  </span>
+                </button>
+              </SidebarBody>
+            </Sidebar>
+          </div>
+        </div>
+      )}
+
+      {/* Main content - Scrollable */}
+      <main className="flex-1 p-4 min-h-screen">{children}</main>
     </div>
   );
 }
 
-export const Logo = () => {
-  return (
-    <a
-      href="#"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+// Logo components - exported for backward compatibility
+export const Logo = () => (
+  <a
+    href="#"
+    className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+  >
+    <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+    <motion.span
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="font-medium whitespace-pre text-black dark:text-white"
     >
-      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
-      <motion.span
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="font-medium whitespace-pre text-black dark:text-white"
-      >
-        Be Social
-      </motion.span>
-    </a>
-  );
-};
+      Be Social
+    </motion.span>
+  </a>
+);
 
-export const LogoIcon = () => {
-  return (
-    <a
-      href="#"
-      className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
-    >
-      <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
-    </a>
-  );
-};
+export const LogoIcon = () => (
+  <a
+    href="#"
+    className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
+  >
+    <div className="h-5 w-6 shrink-0 rounded-tl-lg rounded-tr-sm rounded-br-lg rounded-bl-sm bg-black dark:bg-white" />
+  </a>
+);
+

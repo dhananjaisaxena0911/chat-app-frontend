@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import { FileUploadDemo } from "../FileUploadDemo";
 import { IconArrowLeft } from "@tabler/icons-react";
 interface UploadStoryPageProps {
@@ -19,45 +18,44 @@ export function UploadStoryPage({ onClose }: UploadStoryPageProps) {
     console.log("Current User ID:", currentUserId);
     setUserId(currentUserId);
   }, []);
+  
   const handleFileUpload = async (file: File) => {
-    if (!file || !userId) return;
+    if (!file || !userId) {
+      console.error("Missing file or userId");
+      setSuccessMsg("Upload Failed: Missing data");
+      return;
+    }
 
     setPreview(URL.createObjectURL(file));
     setLoading(true);
 
-    const filePath = `${userId}/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage
-      .from("stories")
-      .upload(filePath, file);
-
-    if (error) {
-      console.error("Error upload file:", error.message);
-      setSuccessMsg("Upload Failed");
-    } else {
-      const { data } = supabase.storage.from("stories").getPublicUrl(filePath);
-      const imageUrl = data.publicUrl;
+    try {
+      console.log("Uploading story to backend...");
+      
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userId", userId);
 
       const response = await fetch("http://localhost:3001/story/upload", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          imageUrl,
-        }),
+        body: formData,
       });
-      if(!response.ok){
-        const {message}=await response.json();
-
-        console.error("Error saving story to db",message);
-        setSuccessMsg("Failed to save story to db");
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Upload failed:", errorData.message || response.statusText);
+        setSuccessMsg("Upload Failed: " + (errorData.message || response.statusText));
+      } else {
+        const data = await response.json();
+        console.log("Story uploaded successfully:", data);
+        setSuccessMsg("Story uploaded successfully!");
+        setPreview(data.imageUrl || URL.createObjectURL(file));
       }
-      else{
-        console.log("story uploaded successfully");
-        setPreview(imageUrl);
-      }
+    } catch (err) {
+      console.error("Error uploading story:", err);
+      setSuccessMsg("Upload Failed: Network error");
     }
+    
     setLoading(false);
   };
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Socket } from "socket.io-client";
 import socket from "../../../utils/socket";
 import { jwtDecode } from "jwt-decode";
 import { SocketListener } from "../../../utils/socketListener";
@@ -25,12 +24,6 @@ interface Props {
   currentUserId: string;
 }
 
-interface MessageItemProps {
-  message: Message;
-  currentUserId: string;
-  socket: Socket;
-}
-
 type DecodedToken = {
   sub: string;
   userId: string;
@@ -45,28 +38,17 @@ function getStatusText(status?: string): string {
   }
 }
 
-function isOwnMessageCheck(senderId: string | undefined, myUserId: string): boolean {
-  if (!myUserId || !senderId) {
-    console.log("isOwnMessageCheck: returning false - myUserId:", myUserId, "senderId:", senderId);
-    return false;
-  }
-  const result = String(senderId).trim() === String(myUserId).trim();
-  console.log("isOwnMessageCheck:", senderId, "vs", myUserId, "=", result);
-  return result;
-}
-
 export default function GroupChat({ groupId, currentUserId }: Props) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const [username, setUsername] = useState("");
   const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState(true);
   
-  // Initialize myUserId synchronously from localStorage to avoid render issues
-  // Use currentUserId prop if available, otherwise fall back to localStorage
+  // Initialize myUserId synchronously - use currentUserId prop if available, otherwise fall back to localStorage
   const [myUserId, setMyUserId] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      // First try the prop if it's already available (during SSR or re-renders)
+      // First try the prop if it's already available
       if (currentUserId) {
         return currentUserId;
       }
@@ -80,7 +62,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
           console.error("Invalid token:", err);
         }
       }
-      // Also check currentUserId in localStorage (used by other components)
+      // Also check currentUserId in localStorage
       const storedUserId = localStorage.getItem("currentUserId");
       if (storedUserId) {
         return storedUserId;
@@ -90,48 +72,25 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
   });
 
   useEffect(() => {
-    // Set loading to false after we have a valid myUserId
-    if (myUserId) {
-      setIsLoading(false);
+    if (currentUserId && currentUserId !== myUserId) {
+      setMyUserId(currentUserId);
     }
-  }, [myUserId]);
-
-  // Initialize username synchronously from localStorage
-  const [username, setUsername] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("token");
-      if (token) {
-        try {
-          const decoded = jwtDecode<DecodedToken>(token);
-          return decoded.username || "User";
-        } catch (err) {
-          console.error("Invalid token:", err);
-        }
-      }
-    }
-    return "";
-  });
+  }, [currentUserId, myUserId]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (token) {
       try {
         const decoded = jwtDecode<DecodedToken>(token);
+        setUsername(decoded.username || "User");
         const extractedId = decoded.sub || decoded.userId || "";
         setMyUserId(extractedId);
-        setUsername(decoded.username || "User");
         console.log("GroupChat - Token decoded, myUserId:", extractedId);
       } catch (err) {
         console.error("Invalid token:", err);
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (currentUserId && currentUserId !== myUserId) {
-      setMyUserId(currentUserId);
-    }
-  }, [currentUserId, myUserId]);
 
   useEffect(() => {
     if (messageEndRef.current) {
@@ -153,8 +112,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
           setMessages(sortedMessages);
           
           sortedMessages.forEach((msg, idx) => {
-            const isOwnMsg = isOwnMessageCheck(msg.senderId, myUserId);
-            console.log(`  [${idx}] senderId="${msg.senderId}", myUserId="${myUserId}", isOwn="${isOwnMsg}"`);
+            console.log(`  [${idx}] senderId="${msg.senderId}", isOwn="${msg.senderId === myUserId}"`);
           });
         } else {
           setMessages([]);
@@ -197,7 +155,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
   useEffect(() => {
     if (messages.length === 0 || !myUserId) return;
     messages.forEach((msg) => {
-      if (!isOwnMessageCheck(msg.senderId, myUserId) && msg.status !== "seen") {
+      if (msg.senderId !== myUserId && msg.status !== "seen") {
         socket.emit("Group-message-seen", { messageId: msg.id, groupId, userId: myUserId });
       }
     });
@@ -205,14 +163,10 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
 
   useEffect(() => {
     const handleShowTyping = ({ userId, username: typingUsername, groupId: incomingGroupId }: { userId: string; username: string; groupId: string }) => {
-      if (incomingGroupId !== groupId || isOwnMessageCheck(userId, myUserId)) return;
-      setTypingUsers((prev) => new Set(prev).add(typingUsername));
+      if (incomingGroupId !== groupId || userId === myUserId) return;
+      setTypingUsers((prev) => new Set([...prev, typingUsername]));
       setTimeout(() => {
-        setTypingUsers((prev) => {
-          const updated = new Set(prev);
-          updated.delete(typingUsername);
-          return updated;
-        });
+        setTypingUsers((prev) => { const updated = new Set(prev); updated.delete(typingUsername); return updated; });
       }, 3000);
     };
     socket.on("show-typing", handleShowTyping);
@@ -224,8 +178,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
     socket.emit("joinGroup", groupId);
     
     const handleNewGroupMessage = (message: Message) => {
-      const isOwnMsg = isOwnMessageCheck(message.senderId, myUserId);
-      console.log("New message from:", message.senderId, "My ID:", myUserId, "Is mine?", isOwnMsg);
+      console.log("New message from:", message.senderId, "My ID:", myUserId, "Is mine?", message.senderId === myUserId);
       socket.emit("Group-message-recieved", { messageId: message.id, groupId: message.groupId, userId: myUserId });
       setMessages((prev) => {
         const exists = prev.some((m) => m.id === message.id);
@@ -253,12 +206,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
 
   return (
     <div className="flex flex-col h-screen w-[99.99%] bg-white dark:bg-neutral-900 shadow-xl overflow-hidden">
-      {/* Show loading or user ID banner */}
-      {!myUserId ? (
-        <div className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 text-xs text-yellow-800 dark:text-yellow-200">
-          Loading user info...
-        </div>
-      ) : (
+      {myUserId && (
         <div className="bg-purple-100 dark:bg-purple-900/30 px-3 py-1 text-xs text-purple-800 dark:text-purple-200">
           My User ID: {myUserId}
         </div>
@@ -267,13 +215,8 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-transparent">
         <AnimatePresence initial={false}>
           {messages.map((msg, idx) => {
-            const isOwn = isOwnMessageCheck(msg.senderId, myUserId);
+            const isOwn = myUserId ? msg.senderId === myUserId : false;
             const showAvatar = !isOwn && (idx === 0 || messages[idx - 1]?.senderId !== msg.senderId);
-            
-            // Debug: Log first few messages' sender IDs
-            if (idx < 3) {
-              console.log(`Message[${idx}] senderId="${msg.senderId}", myUserId="${myUserId}", isOwn=${isOwn}`);
-            }
             
             return (
               <motion.div
@@ -304,6 +247,16 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
                     </span>
                   )}
                 </div>
+                
+                {msg.reaction && msg.reaction.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {msg.reaction.map((reaction, index) => (
+                      <span key={index} className="text-xs bg-white/20 dark:bg-black/20 px-1.5 py-0.5 rounded-full">
+                        {reaction.emoji}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 
                 <div className="mt-1">
                   <MessageItem message={msg} currentUserId={myUserId} socket={socket} />

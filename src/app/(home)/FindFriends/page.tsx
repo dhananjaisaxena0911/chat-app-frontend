@@ -55,10 +55,10 @@ export default function FindFriendsPage() {
 
     };
 
-    const openChat = (userId: string) => {
+    const openProfile = (userId: string) => {
         setShowDropdown(false);
         setSearch("");
-        router.push(`/chat/${userId}`);
+        router.push(`/profile/${userId}`);
     };
     return (
         <BackgroundLines>
@@ -81,7 +81,7 @@ export default function FindFriendsPage() {
                             {results.map((user: any) => (
                                 <li
                                     key={user.id}
-                                    onClick={() => openChat(user.id)}
+                                    onClick={() => openProfile(user.id)}
                                     className="px-4 py-2 hover:bg-gray-300 cursor-pointer text-black"
                                 >
                                     {user.username} ({user.email})
