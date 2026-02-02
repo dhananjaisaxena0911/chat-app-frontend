@@ -41,6 +41,7 @@ async function request<T>(
     const response = await fetch(url, {
       ...fetchOptions,
       headers,
+      credentials: "include", // Required for cookies to be sent/received
     });
 
     if (!response.ok) {
@@ -88,6 +89,7 @@ async function uploadFormData<T>(
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: formData,
+      credentials: "include", // Required for cookies to be sent/received
     });
 
     if (!response.ok) {
