@@ -2,10 +2,17 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 type LoginFormProps = {
   onSwitchToSignup: () => void;
 };
+
+interface LoginResponse {
+  userId: string;
+  token: string;
+  message: string;
+}
 
 export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
   const router = useRouter();
@@ -18,34 +25,23 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3001/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email, password }),
+      const data = await api.post<LoginResponse>("/auth/login", {
+        email,
+        password,
       });
-
-      if (!res.ok) {
-        const error = await res.json();
-        console.log("Login Failed", error.message);
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
       console.log(data);
-      localStorage.setItem('currentUserId', data.userId);
+      localStorage.setItem("currentUserId", data.userId);
       console.log("UserId stored");
 
       if (data.token) {
-        localStorage.setItem('token', data.token);
+        localStorage.setItem("token", data.token);
         console.log("Token stored, relying on ProtectedRoute for redirect");
         router.push("/");
       }
 
       console.log("Login Successful", data.message);
     } catch (error) {
-      console.error(error);
+      console.error("Login Failed:", error);
     } finally {
       setIsLoading(false);
     }
@@ -147,3 +143,4 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
     </div>
   );
 }
+

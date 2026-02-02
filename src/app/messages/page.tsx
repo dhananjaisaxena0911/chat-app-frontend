@@ -9,6 +9,7 @@ import { MessageTabs } from "@/components/ui/MessageTabs";
 import { ConversationList, ConversationListSkeleton } from "@/components/ui/ConversationList";
 import { UnifiedChatView, UnifiedChatViewSkeleton } from "@/components/ui/UnifiedChatView";
 import { formatRelativeTime } from "@/lib/messageUtils";
+import api from "../../../utils/api";
 
 interface Conversation {
   id: string;
@@ -86,8 +87,7 @@ export default function MessagesPage() {
   const fetchConversations = useCallback(async () => {
     if (!currentUserId) return;
     try {
-      const res = await fetch(`http://localhost:3001/conversation/${currentUserId}`);
-      const data = await res.json();
+      const data = await api.get<any>(`/conversation/${currentUserId}`);
       const convoList = Array.isArray(data) ? data : data.conversations || [];
 
       const formatted: Conversation[] = convoList.map((c: any) => {
@@ -117,8 +117,7 @@ export default function MessagesPage() {
   // Fetch groups
   const fetchGroups = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:3001/group");
-      const data = await res.json();
+      const data = await api.get<any[]>("/group");
       const groupList = Array.isArray(data) ? data : [];
 
       const formatted: Conversation[] = groupList.map((g: any) => ({
@@ -145,8 +144,7 @@ export default function MessagesPage() {
   // Fetch group members
   const fetchGroupMembers = useCallback(async (groupId: string) => {
     try {
-      const res = await fetch(`http://localhost:3001/group/${groupId}/members`);
-      const data = await res.json();
+      const data = await api.get<any>(`/group/${groupId}/members`);
       setGroupMembers(data.members || []);
     } catch (error) {
       console.error("Failed to fetch group members", error);
@@ -163,28 +161,15 @@ export default function MessagesPage() {
 
     setIsExitingGroup(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("http://localhost:3001/group/leave", {
-        method: "DELETE",
-        headers: { 
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          groupId: selectedConversation.id,
-          userId: currentUserId,
-        }),
+      await api.post("/group/leave", {
+        groupId: selectedConversation.id,
+        userId: currentUserId,
       });
 
-      if (res.ok) {
-        // Remove the group from conversations
-        setConversations((prev) => prev.filter((c) => c.id !== selectedConversation.id));
-        setSelectedConversation(null);
-        alert("You have left the group successfully!");
-      } else {
-        const error = await res.json();
-        alert(error.message || "Failed to exit group");
-      }
+      // Remove the group from conversations
+      setConversations((prev) => prev.filter((c) => c.id !== selectedConversation.id));
+      setSelectedConversation(null);
+      alert("You have left the group successfully!");
     } catch (error) {
       console.error("Error exiting group:", error);
       alert("Failed to exit group. Please try again.");
@@ -197,17 +182,10 @@ export default function MessagesPage() {
   const fetchFollowersAndFollowing = useCallback(async () => {
     setIsLoadingFollowers(true);
     try {
-      const token = localStorage.getItem("token");
-      const followersRes = await fetch("http://localhost:3001/users/followers", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const followersData = await followersRes.json();
+      const followersData = await api.get<any>("/users/followers");
       setFollowers(followersData.followers || []);
 
-      const followingRes = await fetch("http://localhost:3001/users/following", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const followingData = await followingRes.json();
+      const followingData = await api.get<any>("/users/following");
       setFollowing(followingData.following || []);
     } catch (error) {
       console.error("Failed to fetch followers/following", error);
@@ -276,39 +254,29 @@ export default function MessagesPage() {
     setIsCreatingGroup(true);
     try {
       const memberIds = selectedMembers.map((m) => m.id);
-      const res = await fetch("http://localhost:3001/group", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: groupName.trim(),
-          adminId: currentUserId,
-          memberIds: memberIds,
-        }),
+      const newGroup = await api.post<any>("/group", {
+        name: groupName.trim(),
+        adminId: currentUserId,
+        memberIds: memberIds,
       });
 
-      if (res.ok) {
-        const newGroup = await res.json();
-        const newGroupConversation: Conversation = {
-          id: newGroup.id,
-          type: "group",
-          name: newGroup.name,
-          memberCount: memberIds.length + 1,
-        };
-        setConversations((prev) => [...prev, newGroupConversation]);
-        setGroups((prev) => [...prev, { id: newGroup.id, name: newGroup.name }]);
-        
-        setIsCreateGroupModalOpen(false);
-        setGroupName("");
-        setSelectedMembers([]);
-        
-        setActiveTab("groups");
-        setSelectedConversation(newGroupConversation);
-        
-        alert("Group created successfully!");
-      } else {
-        const error = await res.json();
-        alert(error.message || "Failed to create group");
-      }
+      const newGroupConversation: Conversation = {
+        id: newGroup.id,
+        type: "group",
+        name: newGroup.name,
+        memberCount: memberIds.length + 1,
+      };
+      setConversations((prev) => [...prev, newGroupConversation]);
+      setGroups((prev) => [...prev, { id: newGroup.id, name: newGroup.name }]);
+      
+      setIsCreateGroupModalOpen(false);
+      setGroupName("");
+      setSelectedMembers([]);
+      
+      setActiveTab("groups");
+      setSelectedConversation(newGroupConversation);
+      
+      alert("Group created successfully!");
     } catch (error) {
       console.error("Error creating group:", error);
       alert("Failed to create group. Please try again.");

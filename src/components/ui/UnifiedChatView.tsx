@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Socket, io } from "socket.io-client";
 import { jwtDecode } from "jwt-decode";
 import { formatMessageTime } from "@/lib/messageUtils";
+import api, { getBackendUrl } from "../../../utils/api";
 
 interface Message {
   id: string;
@@ -92,7 +93,7 @@ export function UnifiedChatView({
 
   // Initialize socket
   useEffect(() => {
-    const newSocket = io("http://localhost:3001", {
+    const newSocket = io(getBackendUrl(), {
       transports: ["websocket"],
     });
     setSocket(newSocket);
@@ -126,13 +127,12 @@ export function UnifiedChatView({
       try {
         let url = "";
         if (type === "dm") {
-          url = `http://localhost:3001/message/${conversationId}`;
+          url = `/message/${conversationId}`;
         } else {
-          url = `http://localhost:3001/group/${conversationId}/messages`;
+          url = `/group/${conversationId}/messages`;
         }
 
-        const res = await fetch(url);
-        const data = await res.json();
+        const data = await api.get<any[]>(url);
         const messageList = Array.isArray(data) ? data : [];
         setMessages(messageList);
 
@@ -314,14 +314,10 @@ export function UnifiedChatView({
     // Save to backend
     try {
       if (type === "dm") {
-        await fetch("http://localhost:3001/message", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            senderId: currentUserId,
-            recipientId: otherParticipant?.id,
-            content: messageContent,
-          }),
+        await api.post("/message", {
+          senderId: currentUserId,
+          recipientId: otherParticipant?.id,
+          content: messageContent,
         });
       }
     } catch (error) {

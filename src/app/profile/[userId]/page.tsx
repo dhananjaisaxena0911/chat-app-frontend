@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { SidebarDemo } from "../../../../components/sideBarDemo";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import api from "../../../../utils/api";
 
 type UserProfile = {
   id: string;
@@ -53,17 +54,14 @@ export default function PublicProfilePage() {
 
     const fetchUserData = async () => {
       try {
-        const [userRes, postsRes] = await Promise.all([
-          fetch(`http://localhost:3001/users/${userId}`),
-          fetch("http://localhost:3001/blogs"),
+        const [userData, postsData] = await Promise.all([
+          api.get<{ user: UserProfile }>(`/users/${userId}`),
+          api.get<Blog[]>("/blogs"),
         ]);
 
-        if (!userRes.ok) throw new Error("User not found");
-        const userData = await userRes.json();
         setUser(userData.user);
 
         // Fetch posts by this user
-        const postsData = await postsRes.json();
         const userPosts = Array.isArray(postsData)
           ? postsData.filter((blog: Blog) => blog.author?.id === userId)
           : [];
@@ -82,33 +80,22 @@ export default function PublicProfilePage() {
   useEffect(() => {
     if (!currentUserId || !userId) return;
 
-    fetch(
-      `http://localhost:3001/follow/isFollowing?followerId=${currentUserId}&followingId=${userId}`
-    )
-      .then((res) => res.json())
+    api.get<{ isFollowing: boolean }>(`/follow/isFollowing?followerId=${currentUserId}&followingId=${userId}`)
       .then((data) => setIsFollowing(data.isFollowing))
       .catch((err) => console.error("Error checking follow status", err));
   }, [currentUserId, userId]);
 
   const handleToggleFollow = async () => {
     if (!currentUserId || !userId) return;
-    const url = isFollowing
-      ? "http://localhost:3001/follow/unfollow"
-      : "http://localhost:3001/follow";
+    const endpoint = isFollowing ? "/follow/unfollow" : "/follow";
 
     try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          followerId: currentUserId,
-          followingId: userId,
-        }),
+      await api.post(endpoint, {
+        followerId: currentUserId,
+        followingId: userId,
       });
 
-      if (res.ok) {
-        setIsFollowing(!isFollowing);
-      }
+      setIsFollowing(!isFollowing);
     } catch (error) {
       console.error(error);
     }

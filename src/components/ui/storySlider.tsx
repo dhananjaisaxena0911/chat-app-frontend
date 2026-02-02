@@ -3,7 +3,7 @@
 import { ImagesSlider } from "./images-slider"
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState, useCallback } from "react";
-import axios from "axios";
+import { api } from "../../../utils/api";
 
 interface StoryUser {
   id: string;
@@ -29,8 +29,8 @@ export default function StorySlider({ userId, onClose }: { userId: string; onClo
 
     async function fetchStories() {
       try {
-        const res = await axios.get<Story[]>(`http://localhost:3001/story/active/${userId}`);
-        setStories(res.data);
+        const data = await api.get<Story[]>(`/story/active/${userId}`);
+        setStories(data);
       } catch (error) {
         console.error("Failed to fetch stories:", error);
       } finally {

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { FileUploadDemo } from "../FileUploadDemo";
 import { IconArrowLeft } from "@tabler/icons-react";
+import api from "../../../utils/api";
 interface UploadStoryPageProps {
   onClose: () => void;
 }
@@ -36,21 +37,10 @@ export function UploadStoryPage({ onClose }: UploadStoryPageProps) {
       formData.append("file", file);
       formData.append("userId", userId);
 
-      const response = await fetch("http://localhost:3001/story/upload", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Upload failed:", errorData.message || response.statusText);
-        setSuccessMsg("Upload Failed: " + (errorData.message || response.statusText));
-      } else {
-        const data = await response.json();
-        console.log("Story uploaded successfully:", data);
-        setSuccessMsg("Story uploaded successfully!");
-        setPreview(data.imageUrl || URL.createObjectURL(file));
-      }
+      const data = await api.uploadFormData<any>("/story/upload", formData);
+      console.log("Story uploaded successfully:", data);
+      setSuccessMsg("Story uploaded successfully!");
+      setPreview(data.imageUrl || URL.createObjectURL(file));
     } catch (err) {
       console.error("Error uploading story:", err);
       setSuccessMsg("Upload Failed: Network error");

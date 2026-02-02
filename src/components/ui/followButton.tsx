@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { api } from "@/lib/api";
 
 export function FollowButton({
   currentUserId,
@@ -14,11 +15,10 @@ export function FollowButton({
   useEffect(() => {
     const checkIfFollowing = async () => {
       try {
-        const res = await fetch(
-          `http://localhost:3001/follow/isFollowing?followerId=${currentUserId}&followingId=${profileUserId}`
+        const data = await api.get<{ isFollowing: boolean }>(
+          "/follow/isFollowing",
+          { followerId: currentUserId, followingId: profileUserId }
         );
-        const data = await res.json();
-
         setIsFollowing(data.isFollowing);
       } catch (error) {
         console.error("Failed to fetch following status:", error);
@@ -27,25 +27,16 @@ export function FollowButton({
     checkIfFollowing();
   }, [currentUserId, profileUserId]);
 
-   const toggleFollow = async () => {
+  const toggleFollow = async () => {
     if (!currentUserId || !profileUserId) return;
 
-    const endpoint = isFollowing
-      ? "http://localhost:3001/follow/unfollow"
-      : "http://localhost:3001/follow";
+    const endpoint = isFollowing ? "/follow/unfollow" : "/follow";
 
     try {
-      await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          followerId: currentUserId,
-          followingId: profileUserId,
-        }),
+      await api.post(endpoint, {
+        followerId: currentUserId,
+        followingId: profileUserId,
       });
-
       setIsFollowing(!isFollowing);
     } catch (error) {
       console.error(error);
@@ -60,7 +51,8 @@ export function FollowButton({
       }`}
       onClick={toggleFollow}
     >
-        {isFollowing ? "Unfollow" : "Follow"}
+      {isFollowing ? "Unfollow" : "Follow"}
     </button>
   );
 }
+

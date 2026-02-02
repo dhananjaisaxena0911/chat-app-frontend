@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { SidebarDemo } from "../../../components/sideBarDemo";
 import Link from "next/link";
+import api from "../../../utils/api";
 
 type userProfile = {
   id: string;
@@ -49,25 +50,11 @@ export default function ProfilePage() {
 
       try {
         // Fetch user profile
-        const profileRes = await fetch("http://localhost:3001/users/profile", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!profileRes.ok) {
-          throw new Error("Failed to fetch profile");
-        }
-
-        const profileData = await profileRes.json();
+        const profileData = await api.get<{ user: userProfile }>("/users/profile");
         const userData = profileData.user;
 
         // Fetch user posts
-        const blogsRes = await fetch("http://localhost:3001/blogs");
-        if (!blogsRes.ok) {
-          throw new Error("Failed to fetch posts");
-        }
-        const blogsData = await blogsRes.json();
+        const blogsData = await api.get<Blog[]>("/blogs");
         
         // Filter posts by current user
         const userPosts = blogsData.filter((blog: Blog) => blog.author?.id === userData.id);

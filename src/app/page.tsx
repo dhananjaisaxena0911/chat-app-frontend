@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { FollowButton } from "@/components/ui/followButton";
 import { motion } from "framer-motion";
+import { api } from "@/lib/api";
 
 type Blog = {
   id: string;
@@ -34,8 +35,7 @@ async function getSignedImageUrl(imageUrl: string): Promise<string> {
   
   try {
     const encodedUrl = encodeURIComponent(imageUrl);
-    const response = await fetch(`http://localhost:3001/blogs/signed-url?url=${encodedUrl}`);
-    const data = await response.json();
+    const data = await api.get<{ signedUrl: string }>("/blogs/signed-url", { url: encodedUrl });
     return data.signedUrl || imageUrl;
   } catch (error) {
     console.error('Error fetching signed URL:', error);
@@ -71,8 +71,7 @@ export default function Page() {
   }, [router]);
 
   useEffect(() => {
-    fetch("http://localhost:3001/blogs")
-      .then((res) => res.json())
+    api.get<Blog[]>("/blogs")
       .then(async (data) => {
         const blogsWithSignedUrls = await Promise.all(
           data.map(async (blog: Blog) => ({
@@ -253,34 +252,34 @@ export default function Page() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white dark:bg-neutral-800 rounded-2xl shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden hover:shadow-md transition-shadow duration-300"
+                    className="bg-white dark:bg-neutral-800 rounded-3xl shadow-sm border border-gray-100 dark:border-neutral-700 overflow-hidden hover:shadow-xl transition-all duration-300 group"
                   >
                     {/* Header - Author info */}
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-50 dark:border-neutral-700">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50 dark:border-neutral-700/50">
                       <div className="flex items-center gap-3">
                         <Link
                           href={`/profile/${blog.author?.id}`}
-                          className="relative group"
+                          className="relative group/avatar"
                         >
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 p-[2px]">
-                            <div className="w-full h-full rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center">
-                              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-pink-500 p-[2px]">
+                            <div className="w-full h-full rounded-full bg-white dark:bg-neutral-800 flex items-center justify-center overflow-hidden">
+                              <span className="text-sm font-bold bg-gradient-to-br from-violet-600 to-pink-600 bg-clip-text text-transparent">
                                 {authorInitial}
                               </span>
                             </div>
                           </div>
-                          <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-purple-500/20 blur-sm" />
+                          <div className="absolute inset-0 rounded-full opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-300 bg-gradient-to-br from-violet-500/30 to-pink-500/30 blur-md" />
                         </Link>
                         <div>
                           <Link
                             href={`/profile/${blog.author?.id}`}
-                            className="text-sm font-semibold text-gray-900 dark:text-white hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
+                            className="text-sm font-bold text-gray-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
                           >
                             {authorName}
                           </Link>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mt-0.5">
                             {blog.category && (
-                              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                              <span className="text-xs px-2.5 py-0.5 bg-gradient-to-r from-violet-100 to-pink-100 dark:from-violet-900/40 dark:to-pink-900/40 text-violet-600 dark:text-violet-400 rounded-full font-medium">
                                 {blog.category}
                               </span>
                             )}
@@ -293,7 +292,7 @@ export default function Page() {
                           </div>
                         </div>
                       </div>
-                      <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors">
+                      <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-neutral-700 transition-all duration-200">
                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                           <circle cx="12" cy="5" r="2" />
                           <circle cx="12" cy="12" r="2" />
@@ -302,19 +301,23 @@ export default function Page() {
                       </button>
                     </div>
 
-                    {/* Image */}
-                    <div className="relative aspect-[4/3] w-full bg-gray-100 dark:bg-neutral-700">
+                    {/* Image with hover effect */}
+                    <div className="relative aspect-[4/3] w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-700 dark:to-neutral-800 overflow-hidden">
                       <img
                         src={
                           blog.imageUrl ||
                           "https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=800&q=80"
                         }
                         alt={blog.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
+                      {/* Gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      
+                      {/* Category badge */}
                       {blog.category && (
-                        <div className="absolute top-3 left-3">
-                          <span className="px-3 py-1 bg-black/50 backdrop-blur-sm text-white text-xs font-medium rounded-full">
+                        <div className="absolute top-4 left-4">
+                          <span className="px-3 py-1.5 bg-white/90 dark:bg-neutral-900/90 backdrop-blur-sm text-gray-800 dark:text-white text-xs font-semibold rounded-full shadow-lg">
                             {blog.category}
                           </span>
                         </div>
@@ -322,77 +325,61 @@ export default function Page() {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-neutral-700">
+                    <div className="px-5 py-3 flex items-center justify-between border-b border-gray-50 dark:border-neutral-700/50">
                       <div className="flex items-center gap-1">
                         <motion.button
                           whileTap={{ scale: 0.9 }}
-                          className="p-2.5 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded-full transition-colors"
+                          className="p-2.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
                         >
-                          <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                           </svg>
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.9 }}
-                          className="p-2.5 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded-full transition-colors"
+                          className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors"
                         >
-                          <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
                         </motion.button>
                         <motion.button
                           whileTap={{ scale: 0.9 }}
-                          className="p-2.5 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded-full transition-colors"
+                          className="p-2.5 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-full transition-colors"
                         >
-                          <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                           </svg>
                         </motion.button>
                       </div>
                       <motion.button
                         whileTap={{ scale: 0.9 }}
-                        className="p-2.5 hover:bg-gray-50 dark:hover:bg-neutral-700 rounded-full transition-colors"
+                        className="p-2.5 hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-full transition-colors"
                       >
-                        <svg className="w-6 h-6 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                         </svg>
                       </motion.button>
                     </div>
 
                     {/* Content */}
-                    <div className="px-4 py-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="flex -space-x-2">
-                          {[1, 2, 3].map((i) => (
-                            <div
-                              key={i}
-                              className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-white dark:border-neutral-800"
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {Math.floor(Math.random() * 1000) + 1}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">likes</span>
-                      </div>
+                    <div className="px-5 py-4">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                        {blog.title}
+                      </h3>
+                      <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed line-clamp-3">
+                        {blog.content}
+                      </p>
                       
-                      <div className="space-y-1">
-                        <p className="text-sm text-gray-900 dark:text-white">
-                          <Link
-                            href={`/profile/${blog.author?.id}`}
-                            className="font-semibold mr-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
-                          >
-                            {authorName}
-                          </Link>
-                          <span className="text-gray-700 dark:text-gray-300">{blog.title}</span>
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-400 text-sm line-clamp-2">
-                          {blog.content}
-                        </p>
-                      </div>
+                      {/* Tags */}
+                      {blog.category && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          <span className="text-xs text-violet-600 dark:text-violet-400 font-medium">#{blog.category}</span>
+                        </div>
+                      )}
                       
                       {profileUserId && profileUserId !== currentUserId && (
-                        <div className="mt-4 pt-3 border-t border-gray-50 dark:border-neutral-700">
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-neutral-700">
                           <FollowButton
                             currentUserId={currentUserId}
                             profileUserId={profileUserId}

@@ -7,6 +7,7 @@ import { SocketListener } from "../../../utils/socketListener";
 import MessageItem from "./MessageItem";
 import { motion, AnimatePresence } from "framer-motion";
 import { formatMessageTime } from "@/lib/messageUtils";
+import api from "../../../utils/api";
 
 interface Message {
   id: string;
@@ -101,8 +102,7 @@ export default function GroupChat({ groupId, currentUserId }: Props) {
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const res = await fetch(`http://localhost:3001/group/${groupId}/messages`);
-        const data = await res.json();
+        const data = await api.get<Message[]>(`/group/${groupId}/messages`);
         console.log("Fetched messages:", data?.length || 0);
         
         if (Array.isArray(data)) {

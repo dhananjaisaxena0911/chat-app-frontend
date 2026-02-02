@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { FollowButton } from "@/components/ui/followButton";
+import { api } from "@/lib/api";
 
 type Blog = {
   id: string;
@@ -30,10 +31,8 @@ export default function BlogPage() {
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:3001/blogs")
-      .then((res) => res.json())
+    api.get<Blog[]>("/blogs")
       .then((data) => {
-        // Backend already returns signed URLs, use them directly
         setBlogs(data);
         setLoading(false);
       })

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
 
 type SignUpFormProps = {
   onSuccess: () => void;
@@ -19,24 +20,14 @@ export default function SignUpForm({ onSuccess }: SignUpFormProps) {
     setIsLoading(true);
 
     try {
-      const res = await fetch("http://localhost:3001/auth/signup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, username, password }),
-      });
-
-      if (!res.ok) {
-        const error = await res.json();
-        console.log("Signup Failed:", error.message);
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await res.json();
+      const data = await api.post<{ username: string; email: string }>(
+        "/auth/signup",
+        { email, username, password }
+      );
       console.log("Signup Successful", data.username, data.email);
       onSuccess();
     } catch (error) {
-      console.log(error);
+      console.log("Signup Failed:", error);
     } finally {
       setIsLoading(false);
     }

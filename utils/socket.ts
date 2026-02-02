@@ -1,7 +1,8 @@
 import { io } from "socket.io-client";
+import { getBackendUrl } from './api';
 
-const socket=io("http://localhost:3001",{
-    transports:["websocket"],
+const socket = io(getBackendUrl(), {
+  transports: ["websocket"],
 });
 
 export default socket;

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import axios from "axios";
+import api from "../../../utils/api";
 console.log("📦 UploadStoryPage component loaded");
 
 export default function StoryUpload() {
@@ -14,22 +15,13 @@ export default function StoryUpload() {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
-        "http://localhost:3001/story/upload",
-        { imageUrl },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await api.post("/story/upload", { imageUrl });
       setSuccessMsg("Story upload successfully!");
       setImageUrl("");
       setPreview("");
     } catch (error: any) {
-  console.error("Upload failed:", error?.response?.data || error.message);
-}
+      console.error("Upload failed:", error?.response?.data || error.message);
+    }
     finally{
         setLoading(false);
     }

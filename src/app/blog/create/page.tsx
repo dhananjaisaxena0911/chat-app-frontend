@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 export default function createBlogPage() {
   const router = useRouter();
@@ -76,7 +77,6 @@ export default function createBlogPage() {
     setLoading(true);
 
     try {
-      // Create FormData for file upload
       const formData = new FormData();
       formData.append("authorId", currentUserId);
       formData.append("dto", JSON.stringify({ title, content }));
@@ -85,21 +85,7 @@ export default function createBlogPage() {
         formData.append("image", imageFile);
       }
 
-      const res = await fetch("http://localhost:3001/blogs/create", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Failed to create blog: ${res.status} ${errorText}`);
-      }
-
-      const data = await res.json();
-      console.log(data);
+      await api.uploadFormData("/blogs/create", formData);
       router.push("/blog");
     } catch (error) {
       console.error(error);
