@@ -35,7 +35,12 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
 
       if (data.token) {
         localStorage.setItem("token", data.token);
-        console.log("Token stored, relying on ProtectedRoute for redirect");
+        console.log("Token stored in localStorage");
+
+        // Set token as cookie for middleware to access
+        document.cookie = `token=${data.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        console.log("Token stored in cookie for middleware");
+
         router.push("/");
       }
 
