@@ -47,16 +47,11 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
         
         console.log("Token cookie set on frontend domain", cookieResponse.ok);
 
-        // Add a small delay to ensure cookie is set, then redirect
-        setTimeout(() => {
-          // Use router.push as primary, with window.location as fallback
-          try {
-            router.push("/");
-          } catch (e) {
-            // Fallback to window.location if router fails
-            window.location.href = "/";
-          }
-        }, 100);
+        // Use window.location.replace for reliable redirect in serverless environments
+        // This performs a full page navigation which ensures cookies are properly recognized
+        if (typeof window !== 'undefined') {
+          window.location.replace("/");
+        }
       }
 
       console.log("Login Successful", data.message);
