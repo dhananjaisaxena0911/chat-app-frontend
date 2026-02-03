@@ -38,15 +38,25 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
         console.log("Token stored in localStorage");
 
         // Set token as cookie on frontend domain for middleware to access
-        await fetch("/api/auth/set-cookie", {
+        const cookieResponse = await fetch("/api/auth/set-cookie", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: data.token }),
+          body: JSON.stringify({ token: data.token, userId: data.userId }),
           credentials: "include",
         });
-        console.log("Token cookie set on frontend domain");
+        
+        console.log("Token cookie set on frontend domain", cookieResponse.ok);
 
-        router.push("/");
+        // Add a small delay to ensure cookie is set, then redirect
+        setTimeout(() => {
+          // Use router.push as primary, with window.location as fallback
+          try {
+            router.push("/");
+          } catch (e) {
+            // Fallback to window.location if router fails
+            window.location.href = "/";
+          }
+        }, 100);
       }
 
       console.log("Login Successful", data.message);

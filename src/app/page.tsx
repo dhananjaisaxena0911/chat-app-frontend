@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SidebarDemo } from "../../components/sideBarDemo";
@@ -11,6 +12,7 @@ import Link from "next/link";
 import { FollowButton } from "@/components/ui/followButton";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import ProtectedRoute from "./ProtectedRoute";
 
 type Blog = {
   id: string;
@@ -61,14 +63,17 @@ export default function Page() {
   };
 
   useEffect(() => {
-    const currentUserId = localStorage.getItem("currentUserId");
-    if (currentUserId) {
-      setUserId(currentUserId);
-      setCurrentUserId(currentUserId);
-    } else {
-      router.replace("/auth");
+    // Check both localStorage and cookies for userId
+    const localUserId = localStorage.getItem("currentUserId");
+    const cookieUserId = document.cookie.split('; ').find(row => row.startsWith('userId='))?.split('=')[1];
+    const foundUserId = localUserId || cookieUserId;
+    
+    if (foundUserId) {
+      setUserId(foundUserId);
+      setCurrentUserId(foundUserId);
     }
-  }, [router]);
+    // Note: ProtectedRoute will handle the redirect if no userId is found
+  }, []);
 
   useEffect(() => {
     api.get<Blog[]>("/blogs")
@@ -140,8 +145,9 @@ export default function Page() {
   );
 
   return (
-    <SidebarDemo>
-      <div className="max-w-2xl mx-auto">
+    <ProtectedRoute>
+      <SidebarDemo>
+        <div className="max-w-2xl mx-auto">
         {/* Stories Section - Modern Card */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -446,7 +452,8 @@ export default function Page() {
           }}
         />
       )}
-    </SidebarDemo>
+      </SidebarDemo>
+    </ProtectedRoute>
   );
 }
 

@@ -15,12 +15,21 @@ export default function ProtectedRoute({
   useEffect(() => {
     if (!pathname) return;
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    // Check both localStorage and cookies for the token
+    const localToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    
+    // Also check for cookie (set by /api/auth/set-cookie)
+    const cookieToken = typeof window !== "undefined" 
+      ? document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1]
+      : null;
+    
+    const token = localToken || cookieToken;
     const isAuthPage = pathname.startsWith("/auth") || pathname.startsWith("/login");
 
     console.log("ProtectedRoute useEffect - pathname:", pathname);
     console.log("ProtectedRoute useEffect - isAuthPage:", isAuthPage);
-    console.log("ProtectedRoute useEffect - token:", token);
+    console.log("ProtectedRoute useEffect - localToken:", localToken);
+    console.log("ProtectedRoute useEffect - cookieToken:", cookieToken);
 
     if (!token && !isAuthPage) {
       console.log("No token and not on auth page, redirecting to /auth");
