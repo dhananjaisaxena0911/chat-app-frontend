@@ -76,7 +76,7 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    api.get<Blog[]>("/blogs")
+    api.get<Blog[]>("/blogs/feed", { userId: currentUserId })
       .then(async (data) => {
         const blogsWithSignedUrls = await Promise.all(
           data.map(async (blog: Blog) => ({
@@ -91,7 +91,7 @@ export default function Page() {
         console.error(err);
         setLoading(false);
       });
-  }, []);
+  }, [currentUserId]);
 
   // Loading skeleton component
   const BlogSkeleton = () => (
